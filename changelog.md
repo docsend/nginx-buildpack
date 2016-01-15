@@ -1,3 +1,9 @@
+## v0.5
+
+2016-01-15
+
+Update NGINX, PCRE, and headers more module
+
 ## v0.4
 
 2012-05-13
