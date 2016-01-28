@@ -9,7 +9,7 @@
 # Once the dyno has is 'up' you can open your browser and navigate
 # this dyno's directory structure to download the nginx binary.
 
-NGINX_VERSION=${NGINX_VERSION-1.8.0}
+NGINX_VERSION=${NGINX_VERSION-1.8.1}
 PCRE_VERSION=${PCRE_VERSION-8.38}
 HEADERS_MORE_VERSION=${HEADERS_MORE_VERSION-0.29}
 
