@@ -1,45 +1,60 @@
 daemon off;
-#Heroku dynos have at least 4 cores.
+# Heroku dynos have at least 4 cores.
 worker_processes <%= ENV['NGINX_WORKERS'] || 4 %>;
 
 events {
 	use epoll;
 	accept_mutex on;
-	worker_connections 1024;
+  worker_connections <%= ENV['NGINX_CONNECTIONS'] || 1024 %>;
 }
 
 http {
-        gzip on;
-        gzip_comp_level 2;
-        gzip_min_length 512;
+  gzip on;
+  gzip_comp_level 2;
+  gzip_min_length 512;
 
-	server_tokens off;
+  # Toggle emitting nginx version in error messages
+  #server_tokens off;
 
-	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
-	access_log logs/nginx/access.log l2met;
-	error_log logs/nginx/error.log;
+  log_format l2met 'measure#nginx.service=$request_time '
+                   'measure#nginx.bytes=$bytes_sent '
+                   'measure#nginx.request_length=$request_length '
+                   'request_id=$http_x_request_id '
+                   '<%= ENV['DYNO'].to_s.empty? ? '' : "dyno=#{ENV['DYNO']} " %>'
+                   'status=$status '
+                   'request="$request" '
+                   'referer=$http_referer '
+                   'ip=$http_x_forwarded_for '
+                   'ua="$http_user_agent"';
+  access_log logs/nginx/access.log l2met;
+  error_log logs/nginx/error.log;
 
-	include mime.types;
-	default_type application/octet-stream;
-	sendfile on;
+  include mime.types;
+  default_type application/octet-stream;
+  sendfile on;
 
-	#Must read the body in 5 seconds.
-	client_body_timeout 5;
+  # This timer is reset after 2 successive reads
+  # See http://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout
+  client_body_timeout <%= ENV['NGINX_TIMEOUT'] || 24 %>;
 
-	upstream app_server {
-		server unix:/tmp/nginx.socket fail_timeout=0;
- 	}
+  # Big buffer for slow clients (default 16k on x86_64 machines)
+  #client_body_buffer_size 64k;
+  client_max_body_size 20m;
 
-	server {
-		listen <%= ENV["PORT"] %>;
-		server_name _;
-		keepalive_timeout 5;
+  upstream app_server {
+    server unix:/tmp/nginx.socket fail_timeout=0;
+  }
 
-		location / {
-			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-			proxy_set_header Host $http_host;
-			proxy_redirect off;
-			proxy_pass http://app_server;
-		}
-	}
+  server {
+    listen <%= ENV["PORT"] %>;
+    server_name _;
+    keepalive_timeout <%= ENV['NGINX_KEEPALIVE_TIMEOUT'] || 24 %>;
+
+    location / {
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $http_host;
+      proxy_redirect off;
+      proxy_pass http://app_server;
+    }
+  }
 }
