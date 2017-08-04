@@ -2,7 +2,7 @@
 
 2017-07-25
 
-Update NGINX to 1.12.1, PCRE, and headers more module
+Update NGINX to 1.13.3, PCRE, and headers more module
 
 ## v0.5
 
